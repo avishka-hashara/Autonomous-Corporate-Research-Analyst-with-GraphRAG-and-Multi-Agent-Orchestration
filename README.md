@@ -1,5 +1,7 @@
 # The Corporate Analyst Agent
 
+![Streamlit UI](assets/streamlit_ui.png)
+
 An autonomous AI agent designed to analyze corporate strategy documents using a **GraphRAG** (Graph Retrieval-Augmented Generation) approach. It combines structured data (Neo4j Graph) and unstructured data (Vector Search) to answer complex questions about organizational relationships and strategic risks.
 
 ## 🚀 Features
