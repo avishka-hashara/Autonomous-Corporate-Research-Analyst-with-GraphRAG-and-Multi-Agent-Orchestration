@@ -76,6 +76,34 @@ Start the interactive agent session.
 python src/agent.py
 ```
 
+### 4. Run the Web Interface (Streamlit)
+To use the visual chat interface:
+```bash
+streamlit run src/app.py
+```
+
+## 🔄 How to Resume (After Shutdown)
+
+If you restart your computer, follow these steps to get everything running again:
+
+1.  **Start Neo4j**:
+    *   Open Neo4j Desktop and click **Start** on your database.
+    *   *Or* if using Docker: `docker-compose up -d`
+
+2.  **Start Ollama**:
+    *   Open your terminal/PowerShell and run `ollama serve`.
+
+3.  **Activate Environment & Run**:
+    *   Open a new terminal in the project folder.
+    *   Activate the virtual environment:
+        ```ps1
+        .\venv\Scripts\Activate.ps1
+        ```
+    *   Run the app:
+        ```bash
+        streamlit run src/app.py
+        ```
+
 ## 🧪 Testing the Agent
 
 The agent supports different types of reasoning. Try these queries:
