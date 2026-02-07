@@ -15,13 +15,14 @@ from neo4j import GraphDatabase
 
 import sys
 
-def ingest_vectors():
+def ingest_vectors(file_path: str = None):
     print("Loading PDF for Vectorization...")
-    # Check for CLI argument or use default
-    if len(sys.argv) > 1:
-        file_path = sys.argv[1]
-    else:
-        file_path = "data/strategy_report.pdf"
+    # Check for CLI argument or use default if not provided
+    if not file_path:
+        if len(sys.argv) > 1:
+            file_path = sys.argv[1]
+        else:
+            file_path = "data/strategy_report.pdf"
         
     print(f"Processing: {file_path}")
     loader = PyPDFLoader(file_path)

@@ -8,6 +8,7 @@ from langchain_community.graphs import Neo4jGraph
 from langchain_core.output_parsers import JsonOutputParser
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
+from vector_store import search_vectors
 
 load_dotenv()
 
@@ -57,33 +58,25 @@ def supervisor_node(state: AgentState):
     """
     
     if critique:
-        system += f"\n\nPREVIOUS CRITIQUE: {critique}\nAdjust your plan to address this."
+        system += f"\n\nPREVIOUS CRITIQUE: {{critique}}\nAdjust your plan to address this."
     
-    context_summary = f"Documents found so far: {len(state.get('documents', []))}"
+    context_summary = f"Documents found so far: {{doc_count}}"
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system),
-        ("human", f"Question: {question}\n\nContext: {context_summary}\n\nAttempts: {attempts}")
+        ("human", "Question: {question}\n\nContext: {context_summary}\n\nAttempts: {attempts}")
     ])
     
     chain = prompt | json_llm
-    response = chain.invoke({"question": question})
+    response = chain.invoke({
+        "question": question, 
+        "context_summary": f"Documents found so far: {len(state.get('documents', []))}",
+        "attempts": attempts,
+        "critique": critique
+    })
     plan = json.loads(response.content)
     
     return {"plan": plan, "attempts": attempts + 1}
-
-def vector_search_node(state: AgentState):
-    """
-    Executes a vector search.
-    """
-    plan = state["plan"]
-    query = plan.get("query", state["question"])
-    
-    print(f"--- [VECTOR SEARCH] {query} ---")
-    
-from vector_store import search_vectors
-
-    # ... (other imports)
 
 def vector_search_node(state: AgentState):
     """
@@ -108,14 +101,25 @@ def graph_search_node(state: AgentState):
     print(f"--- [GRAPH SEARCH] {query} ---")
     
     # We use LLM to gen Cypher
-    cypher_prompt = f"""
+    cypher_prompt = """
     Task: Generate Cypher for: {query}
-    Schema: {graph.schema}
+    Schema: {schema}
     Return ONLY JSON: {{"cypher": "MATCH ...", "reasoning": "..."}}
     """
     
     try:
-        response = json_llm.invoke(cypher_prompt)
+        # Using prompt template for safety here too, although string format is also fine if schema is safe.
+        # But for consistency let's use invoke with the prompt string if using ChatOllama directly supports it, 
+        # or format it manually safely. ChatOllama.invoke takes string or messages.
+        # Let's use simple python format safely or construct proper messages.
+        
+        prompt = ChatPromptTemplate.from_messages([
+             ("system", "You are a Neo4j Cypher expert."),
+             ("human", cypher_prompt)
+        ])
+        chain = prompt | json_llm
+        response = chain.invoke({"query": query, "schema": graph.schema})
+        
         cypher_json = json.loads(response.content)
         cypher = cypher_json.get("cypher")
         
@@ -142,11 +146,11 @@ def generator_node(state: AgentState):
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system),
-        ("human", f"Context:\n{docs}\n\nQuestion: {question}")
+        ("human", "Context:\n{docs}\n\nQuestion: {question}")
     ])
     
     chain = prompt | llm
-    response = chain.invoke({})
+    response = chain.invoke({"docs": docs, "question": question})
     return {"answer": response.content}
 
 def reviewer_node(state: AgentState):
@@ -169,8 +173,13 @@ def reviewer_node(state: AgentState):
     }}
     """
     
-    chain = ChatPromptTemplate.from_messages([("system", system), ("human", f"Q: {question}\nA: {answer}")]) | json_llm
-    response = json.loads(chain.invoke({}).content)
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system),
+        ("human", "Q: {question}\nA: {answer}")
+    ])
+    
+    chain = prompt | json_llm
+    response = json.loads(chain.invoke({"question": question, "answer": answer}).content)
     
     if response["status"] == "APPROVED":
         return {"critique": None}

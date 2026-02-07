@@ -43,13 +43,14 @@ RELATIONSHIPS should be UPPERCASE (e.g., LOCATED_IN, MANAGED_BY).
 
 import sys
 
-def process_document():
+def process_document(file_path: str = None):
     print("Loading PDF using PyPDFLoader (Fallback)...")
-    # Check for CLI argument or use default
-    if len(sys.argv) > 1:
-        file_path = sys.argv[1]
-    else:
-        file_path = "data/strategy_report.pdf"
+    # Check for CLI argument or use default if not provided
+    if not file_path:
+        if len(sys.argv) > 1:
+            file_path = sys.argv[1]
+        else:
+            file_path = "data/strategy_report.pdf"
     
     print(f"Processing: {file_path}")
     if not os.path.exists(file_path):

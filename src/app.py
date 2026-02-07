@@ -18,6 +18,39 @@ st.set_page_config(page_title="Corporate Analyst Agent", layout="wide")
 st.title("🤖 Corporate Analyst Agent")
 st.markdown("Ask questions about company strategy, risks, and structure. I can search documents and the knowledge graph.")
 
+# --- File Upload Section ---
+with st.sidebar:
+    st.header("📂 Document Upload")
+    uploaded_file = st.file_uploader("Upload a PDF report", type="pdf")
+    
+    if uploaded_file is not None:
+        if st.button("Process Document"):
+            with st.spinner("Processing document... This may take a while."):
+                # 1. Save file locally
+                os.makedirs("data/uploaded", exist_ok=True)
+                file_path = os.path.join("data/uploaded", uploaded_file.name)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                st.success(f"File saved to {file_path}")
+
+                # 2. Trigger Ingestion
+                try:
+                    # Import here to avoid circular dependencies if any, or just for cleanliness
+                    from ingest import process_document
+                    from vector_store import ingest_vectors
+
+                    st.info("Starting Vector Ingestion (Fast)...")
+                    ingest_vectors(file_path)
+                    st.success("Vector Index Updated!")
+
+                    st.info("Starting Graph Extraction (Slow - Llama3)...")
+                    process_document(file_path) # This prints to stdout, we won't see it in UI easily without redirecting
+                    st.success("Knowledge Graph Updated!")
+                    
+                except Exception as e:
+                    st.error(f"Error during processing: {e}")
+
+
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
