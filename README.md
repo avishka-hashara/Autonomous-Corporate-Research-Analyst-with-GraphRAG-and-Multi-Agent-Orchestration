@@ -1,47 +1,62 @@
-# The Corporate Analyst Agent
+# Autonomous Corporate Research Analyst (Cognitive Enterprise Architect)
 
-![Streamlit UI](assets/streamlit_ui.png)
+This is an advanced AI agent designed to analyze corporate strategy documents using a **GraphRAG** approach and **Agentic State Machine** orchestration.
 
-An autonomous AI agent designed to analyze corporate strategy documents using a **GraphRAG** (Graph Retrieval-Augmented Generation) approach. It combines structured data (Neo4j Graph) and unstructured data (Vector Search) to answer complex questions about organizational relationships and strategic risks.
+![Architecture](https://via.placeholder.com/800x400?text=Supervisor+->+Workers+->+Generator+->+Reviewer)
+
+## 🧠 System Architecture
+
+The system has been upgraded from a simple "Manual Agent" to a **Cognitive Enterprise Architect** using **LangGraph**. It follows a **Supervisor-Worker-Reviewer** pattern:
+
+1.  **Supervisor Node**:
+    - Analyzes the visual complexity of the user's query.
+    - Routes the task to the appropriate worker (`VectorSearch` for unstructured text or `GraphSearch` for structured relationships).
+    - Can decompose complex queries into multiple steps (via the Reviewer loop).
+
+2.  **Worker Nodes**:
+    - **VectorSearch Worker**: Queries the Neo4j Vector Index for semantic understanding (e.g., "What are the risks?").
+    - **GraphSearch Worker**: Generates Cypher queries to find precise relationships in Neo4j (e.g., "Who reports to Sarah Connor?").
+
+3.  **Generator Node**:
+    - Synthesizes information from all workers to draft an answer.
+
+4.  **Reviewer Node (Self-Correction)**:
+    - Acts as a "Senior Editor".
+    - Grades the answer for faithfulness and relevance.
+    - **Loop**: If the answer is rejected, it sends critique back to the Supervisor to refine the search.
 
 ## 🚀 Features
 
-*   **Agentic Reasoning**: Uses `ManualAgent` logic to intelligently route queries to the correct tool.
-*   **Graph Database (Neo4j)**: Maps entities like *People* and *Organizations* and their relationships (`REPORTS_TO`, `WORKS_FOR`).
-*   **Vector Search**: Indexes document chunks for semantic search to answer abstract questions (e.g., "What are the risks?").
-*   **Local LLM**: Powered entirely by local models using **Ollama** (`llama3`, `nomic-embed-text`).
+*   **Hybrid Knowledge Store**: Uses Neo4j for both **Knowledge Graph** (Entities/Relationships) and **Vector Store** (Embeddings).
+*   **Self-Correcting**: The agent can try up to 3 times to improve its answer based on critique.
+*   **Structured Ingestion**: Uses a custom pipeline to extract entities (People, Orgs) and relationships from PDFs.
+*   **Evaluation Pipeline**: Integrated **Ragas** framework to measure `faithfulness` and `answer_relevancy`.
 
 ## 🛠️ Prerequisites
 
-1.  **Python 3.10+**
+1.  **Python 3.10+** (Recommend 3.10-3.12, works on 3.14 with verified fallbacks)
 2.  **Neo4j Database**:
-    *   Locally installed or via Docker (running on `bolt://localhost:7687`).
-    *   APOC plugin enabled (recommended).
+    - Local or Docker (`bolt://localhost:7687`).
+    - APOC plugin enabled.
 3.  **Ollama**:
-    *   Install Ollama from [ollama.com](https://ollama.com).
-    *   Pull the required models:
-        ```bash
-        ollama pull llama3
-        ollama pull nomic-embed-text
-        ```
+    - `llama3` (Logic/Generation)
+    - `nomic-embed-text` (Embeddings)
 
 ## 📦 Installation
 
-1.  **Clone the repository** (or navigate to the project folder).
-2.  **Create a virtual environment**:
+1.  **Clone & Setup venv**:
     ```bash
     python -m venv venv
-    .\venv\Scripts\Activate.ps1  # Windows PowerShell
-    # source venv/bin/activate # Mac/Linux
+    .\venv\Scripts\Activate.ps1
     ```
-3.  **Install dependencies**:
+
+2.  **Install Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
-    *(Note: If `requirements.txt` is missing, ensure you have `langchain`, `langchain-community`, `langchain-ollama`, `neo4j` installed).*
+    *(Note: Uses `pypdf` for compatibility as `unstructured` has strict build requirements on Windows).*
 
-4.  **Configure Environment**:
-    Create a `.env` file in the root directory:
+3.  **Configure `.env`**:
     ```env
     NEO4J_URI=bolt://localhost:7687
     NEO4J_USERNAME=neo4j
@@ -50,90 +65,35 @@ An autonomous AI agent designed to analyze corporate strategy documents using a 
 
 ## ⚡ Quick Start
 
-### 1. Generate & Ingest Data
-First, create the dummy PDF and populate the knowledge graph.
+### 1. Ingest Data (ETL)
+Populate the Knowledge Graph and Vector Index.
 
 ```bash
-# Generate the confidential PDF report
-python create_data.py
-
-# Ingest entities into the Graph (People, Orgs)
+# 1. Extract Entities & Relationships to Neo4j
 python src/ingest.py
 
-# Ingest unstructured text into the Vector Store
+# 2. Index Text Chunks for Vector Search
 python src/vector_store.py
 ```
 
-### 2. Verify Data (Optional)
-Check if the data was loaded correctly.
-```bash
-python verify_graph.py
-```
+### 2. Run the Agent (UI)
+Start the Streamlit interface.
 
-### 3. Run the Agent
-Start the interactive agent session.
-```bash
-python src/agent.py
-```
-
-### 4. Run the Web Interface (Streamlit)
-To use the visual chat interface:
 ```bash
 streamlit run src/app.py
 ```
 
-## 🔄 How to Resume (After Shutdown)
+### 3. Run Evaluation (Optional)
+Run the Ragas evaluation suite.
 
-If you restart your computer, follow these steps to get everything running again:
+```bash
+python src/eval.py
+```
 
-1.  **Start Neo4j**:
-    *   Open Neo4j Desktop and click **Start** on your database.
-    *   *Or* if using Docker: `docker-compose up -d`
+## 📂 Key Files
 
-2.  **Start Ollama**:
-    *   Open your terminal/PowerShell and run `ollama serve`.
-
-3.  **Activate Environment & Run**:
-    *   Open a new terminal in the project folder.
-    *   Activate the virtual environment:
-        ```ps1
-        .\venv\Scripts\Activate.ps1
-        ```
-    *   Run the app:
-        ```bash
-        streamlit run src/app.py
-        ```
-
-## 🧪 Testing the Agent
-
-The agent supports different types of reasoning. Try these queries:
-
-*   **Graph Query (Relationships):**
-    > "Who does Sarah Connor report to?"
-    *Expected:* John Smith (retrieved from Graph).
-
-*   **Vector Query (Context):**
-    > "What are the risks mentioned in the report?"
-    *Expected:* Regulatory risks / FTC investigation (retrieved from Vectors).
-
-*   **Complex Query:**
-    > "Who is leading the acquisition and what is the budget?"
-    *Expected:* Sarah Connor / $500M (retrieved from Vectors/Graph).
-
-## 📂 Project Structure
-
-*   `src/agent.py`: Main agent logic. Contains the `ManualAgent` class and tool definitions.
-*   `src/ingest.py`: PDF extraction and strictly structured Graph ingestion.
-*   `src/vector_store.py`: Vector embedding generation and Neo4j indexing.
-*   `create_data.py`: Generates the dummy `strategy_report.pdf` data source.
-*   `verify_graph.py`: Diagnostic script to inspect database contents.
-
-## 🔧 Troubleshooting
-
-*   **Result "I don't know":**
-    *   Ensure Ollama is running (`ollama serve`).
-    *   Check if the graph is populated using `verify_graph.py`.
-    *   If using Llama 3, ensure `src/agent.py` uses the strict `CYPHER_GENERATION_TEMPLATE` to avoid property name hallucinations (e.g. using `type` instead of `id`).
-
-*   **Import Errors (`ModuleNotFoundError`):**
-    *   This project avoids complex `langchain.agents` dependencies by using a custom `ManualAgent` implementation to ensure compatibility with various environment setups.
+*   `src/graph_agent.py`: **Core Logic**. Defines the LangGraph state machine, nodes, and edges.
+*   `src/ingest.py`: PDF ETL pipeline with Entity Extraction prompt.
+*   `src/vector_store.py`: Vector embedding and indexing.
+*   `src/app.py`: Streamlit UI.
+*   `src/eval.py`: Evaluation script using Ragas.

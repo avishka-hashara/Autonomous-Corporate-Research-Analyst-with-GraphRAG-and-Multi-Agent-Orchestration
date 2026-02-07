@@ -13,9 +13,18 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 from neo4j import GraphDatabase
 
+import sys
+
 def ingest_vectors():
     print("Loading PDF for Vectorization...")
-    loader = PyPDFLoader("data/strategy_report.pdf")
+    # Check for CLI argument or use default
+    if len(sys.argv) > 1:
+        file_path = sys.argv[1]
+    else:
+        file_path = "data/strategy_report.pdf"
+        
+    print(f"Processing: {file_path}")
+    loader = PyPDFLoader(file_path)
     docs = loader.load()
 
     # Split documents
@@ -90,6 +99,37 @@ def ingest_vectors():
         print(f"Error during ingestion: {e}")
     finally:
         driver.close()
+
+def get_retriever():
+    """Returns a Neo4jVector retriever."""
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    try:
+        vector_index = Neo4jVector.from_existing_graph(
+            embeddings,
+            url=NEO4J_URI,
+            username=NEO4J_USERNAME,
+            password=NEO4J_PASSWORD,
+            index_name="strategy_vector_index",
+            node_label="Chunk",
+            text_node_properties=["text", "source", "page"],
+            embedding_node_property="embedding",
+        )
+        return vector_index.as_retriever()
+    except Exception as e:
+        print(f"Vector Store Error: {e}")
+        return None
+
+def search_vectors(query: str):
+    """Simple wrapper for vector search."""
+    retriever = get_retriever()
+    if not retriever:
+        return ["Vector store not available."]
+    
+    try:
+        docs = retriever.invoke(query)
+        return [f"Source: {d.metadata.get('source', 'unknown')} (Page {d.metadata.get('page', '?')})\nContent: {d.page_content}" for d in docs]
+    except Exception as e:
+        return [f"Error searching vectors: {e}"]
 
 if __name__ == "__main__":
     ingest_vectors()

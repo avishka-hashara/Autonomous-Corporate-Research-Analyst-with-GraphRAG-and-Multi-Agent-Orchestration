@@ -1,0 +1,15 @@
+langchain
+langchain-community
+langchain-ollama
+# langchain-unstructured  # Requires complex build on Windows/Py3.14
+langgraph
+neo4j
+python-dotenv
+streamlit
+# unstructured[pdf]     # Failed build on Windows/Py3.14
+# ragas                 # Dependency issues
+pypdf                   # Fallback PDF loader
+onnxruntime             # Helper for ML
+pdf2image               # Helper for PDF processing
+nest_asyncio            # Fixes Streamlit asyncio event loop issues
+streamlit-agraph        # Visual Graph Explorer
