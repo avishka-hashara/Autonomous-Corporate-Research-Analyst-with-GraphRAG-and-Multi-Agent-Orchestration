@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 import os
+import time
 
 # Ensure src is in python path
 sys.path.append(os.path.dirname(__file__))
@@ -13,10 +14,22 @@ except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from src.graph_agent import app as agent_app
 
-st.set_page_config(page_title="Corporate Analyst Agent", layout="wide")
+# Import custom styles
+try:
+    from ui_styles import apply_custom_css, render_header
+except ImportError:
+    # Fallback if ui_styles is not found (shouldn't happen if structure is correct)
+    def apply_custom_css(): pass
+    def render_header(): st.title("🤖 Corporate Analyst Agent")
 
-st.title("🤖 Corporate Analyst Agent")
-st.markdown("Ask questions about company strategy, risks, and structure. I can search documents and the knowledge graph.")
+# --- Page Config ---
+st.set_page_config(page_title="Corporate Analyst Agent", page_icon="🤖", layout="wide")
+
+# Apply Custom CSS
+apply_custom_css()
+
+# Render Custom Header
+render_header()
 
 # --- System Check ---
 def check_system_health():
@@ -29,9 +42,9 @@ def check_system_health():
         from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
         driver.verify_connectivity()
-        health_status.append("✅ Neo4j Connected")
+        health_status.append(("Neo4j", "Connected", "✅"))
     except Exception:
-        health_status.append("❌ Neo4j Disconnected (Check Docker)")
+        health_status.append(("Neo4j", "Disconnected", "❌"))
 
     # Check Ollama
     try:
@@ -39,58 +52,70 @@ def check_system_health():
         from config import OLLAMA_BASE_URL
         res = requests.get(f"{OLLAMA_BASE_URL}")
         if res.status_code == 200:
-            health_status.append("✅ Ollama Connected")
+            health_status.append(("Ollama", "Connected", "✅"))
         else:
-             health_status.append("⚠️ Ollama Reachable but returned error")
+            health_status.append(("Ollama", "Error", "⚠️"))
     except Exception:
-         health_status.append("❌ Ollama Disconnected (Check Local Server)")
+         health_status.append(("Ollama", "Disconnected", "❌"))
          
     return health_status
 
-with st.expander("System Health Checks"):
-    for status in check_system_health():
-        st.write(status)
-
-# --- File Upload Section ---
+# --- Sidebar ---
 with st.sidebar:
-    st.header("📂 Document Upload")
-    uploaded_file = st.file_uploader("Upload a PDF report", type="pdf")
+    st.image("https://img.icons8.com/clouds/200/company.png", width=150) # Placeholder or local asset
+    st.markdown("### 📊 Analyst Dashboard")
+    
+    # System Health in Sidebar (Mini)
+    with st.expander("System Status", expanded=False):
+        for service, status_text, icon in check_system_health():
+            st.markdown(f"**{service}**: {status_text} {icon}")
+
+    st.markdown("---")
+    st.header("📂 Data Ingestion")
+    uploaded_file = st.file_uploader("Upload Company Report (PDF)", type="pdf")
     
     if uploaded_file is not None:
-        if st.button("Process Document"):
+        if st.button("🚀 Process Document", type="primary"):
             status_container = st.empty()
             
             def update_status(msg):
                 status_container.info(msg)
 
-            with st.spinner("Processing document... This may take a while."):
-                # 1. Save file locally
-                os.makedirs("data/uploaded", exist_ok=True)
-                file_path = os.path.join("data/uploaded", uploaded_file.name)
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                st.success(f"File saved to {file_path}")
-
-                # 2. Trigger Ingestion
+            with st.status("Processing Document...", expanded=True) as status:
                 try:
-                    # Import here
+                    # 1. Save file locally
+                    os.makedirs("data/uploaded", exist_ok=True)
+                    file_path = os.path.join("data/uploaded", uploaded_file.name)
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    st.write(f"✅ File saved: `{uploaded_file.name}`")
+
+                    # 2. Trigger Ingestion
+                    # Import here to avoid early errors
                     from ingest import process_document
                     from vector_store import ingest_vectors
 
-                    update_status("Starting Vector Ingestion (Fast)...")
-                    ingest_vectors(file_path, status_callback=update_status)
-                    st.success("Vector Index Updated!")
+                    st.write("⚙️ Ingesting Vectors...")
+                    ingest_vectors(file_path, status_callback=lambda m: st.write(f"vectors: {m}"))
+                    st.write("✅ Vectors Index Updated")
 
-                    update_status("Starting Graph Extraction (Slow - Llama3)...")
-                    process_document(file_path, status_callback=update_status) 
-                    st.success("Knowledge Graph Updated!")
+                    st.write("🕸️ Extracting Knowledge Graph (Llama3)...")
+                    process_document(file_path, status_callback=lambda m: st.write(f"graph: {m}")) 
+                    st.write("✅ Knowledge Graph Updated")
+                    
+                    status.update(label="Processing Complete!", state="complete", expanded=False)
+                    st.balloons()
                     
                 except Exception as e:
-                    st.error(f"Error during processing: {e}")
+                    status.update(label="Processing Failed", state="error")
+                    st.error(f"Error: {e}")
+
+    st.markdown("---")
+    st.markdown("###### Powered by LangGraph & Neo4j")
 
 
 # --- Main Layout with Tabs ---
-tab1, tab2 = st.tabs(["💬 Chat", "🗂️ Manage Resources"])
+tab1, tab2 = st.tabs(["💬 Analyst Chat", "🗂️ Knowledge Base"])
 
 with tab1:
     # Initialize chat history
@@ -99,20 +124,22 @@ with tab1:
 
     # Display chat messages from history on app rerun
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
+        role = message["role"]
+        avatar = "🤖" if role == "assistant" else "👤"
+        with st.chat_message(role, avatar=avatar):
             st.markdown(message["content"])
 
     # Accept user input
-    if prompt := st.chat_input("What would you like to know?"):
+    if prompt := st.chat_input("Ask about company strategy, risks, or market position..."):
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
         
         # Display user message in chat message container
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar="👤"):
             st.markdown(prompt)
 
         # Display assistant response in chat message container
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar="🤖"):
             message_placeholder = st.empty()
             status_placeholder = st.empty()
             full_response = ""
@@ -120,6 +147,8 @@ with tab1:
             with status_placeholder.status("Thinking...", expanded=True) as status:
                 try:
                     inputs = {"question": prompt}
+                    # Placeholder for graph visualization (future)
+                    
                     for output in agent_app.stream(inputs):
                         for key, value in output.items():
                             if key == "supervisor":
@@ -160,31 +189,35 @@ with tab2:
         docs = list_documents()
         
         if not docs:
-            st.info("No documents uploaded yet.")
+            st.info("No documents uploaded yet.", icon="ℹ️")
         else:
-            st.markdown(f"Found **{len(docs)}** documents.")
-            
-            for doc in docs:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"📄 **{doc}**")
-                with col2:
-                    if st.button("Delete", key=f"del_{doc}", type="primary"):
+            # Using a container for better spacing
+            with st.container():
+                st.write(f"**{len(docs)}** Documents in the Knowledge Base")
+                
+                # Header row
+                c1, c2, c3 = st.columns([3, 1, 1])
+                c1.markdown("**Filename**")
+                c2.markdown("**Format**")
+                c3.markdown("**Action**")
+                st.divider()
+
+                for doc in docs:
+                    c1, c2, c3 = st.columns([3, 1, 1])
+                    c1.write(f"📄 {doc}")
+                    c2.write("PDF") # Assuming PDF for now
+                    
+                    if c3.button("🗑️ Delete", key=f"del_{doc}"):
                         with st.spinner(f"Deleting {doc}..."):
                             res = delete_document(doc)
-                            if res['disk']:
-                                st.success(f"Deleted {doc} from disk.")
+                            if res['disk'] or res['vector'] or res['graph']:
+                                st.toast(f"Deleted {doc}", icon="✅")
                             else:
-                                st.warning(f"Could not delete {doc} from disk (maybe already gone).")
-                                
-                            if res['vector']:
-                                st.success(f"Removed vectors for {doc}.")
-                            
-                            if res['graph']:
-                                st.success(f"Removed graph nodes for {doc}.")
-                                
+                                st.toast(f"Could not delete {doc}", icon="⚠️")
+                        time.sleep(1) # Give time for toast
                         st.rerun()
+                    
+                    st.divider()
                         
     except ImportError:
         st.error("Could not import manage_data module. Please check installation.")
-

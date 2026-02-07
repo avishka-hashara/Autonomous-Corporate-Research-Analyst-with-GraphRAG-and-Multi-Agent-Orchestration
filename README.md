@@ -2,6 +2,8 @@
 
 This is an advanced AI agent designed to analyze corporate strategy documents using a **GraphRAG** approach and **Agentic State Machine** orchestration.
 
+![Corporate Analyst Agent Interface](assets/interface_preview.png)
+
 ![Architecture](https://via.placeholder.com/800x400?text=Supervisor+->+Workers+->+Generator+->+Reviewer)
 
 ## 🧠 System Architecture
@@ -82,3 +84,4 @@ The system follows a **Supervisor-Worker-Reviewer** pattern using **LangGraph**:
 *   `src/config.py`: Centralized configuration.
 
 
+2-WLQr6FcEU1GThqiXJ97Der-PKOnOa6Gsf3AXyvghE
