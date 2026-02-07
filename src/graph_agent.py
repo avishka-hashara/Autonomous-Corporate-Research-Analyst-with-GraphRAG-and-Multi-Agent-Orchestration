@@ -21,14 +21,12 @@ class AgentState(TypedDict):
     critique: str
     attempts: int
 
-# --- 2. Tool Setup ---
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, LLM_MODEL
 
+# --- 2. Tool Setup ---
 graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD)
-llm = ChatOllama(model="llama3", temperature=0)
-json_llm = ChatOllama(model="llama3", temperature=0, format="json")
+llm = ChatOllama(model=LLM_MODEL, temperature=0)
+json_llm = ChatOllama(model=LLM_MODEL, temperature=0, format="json")
 
 # --- 3. Nodes ---
 

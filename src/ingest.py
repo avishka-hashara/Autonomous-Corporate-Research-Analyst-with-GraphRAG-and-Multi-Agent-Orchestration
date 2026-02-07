@@ -6,20 +6,14 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.graphs import Neo4jGraph
-from dotenv import load_dotenv
-from langchain_core.output_parsers import JsonOutputParser
-
 # 1. Setup
-load_dotenv()
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, LLM_MODEL
 
 # Initialize Graph
 graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD)
 
 # 2. The Llama 3 Model (Structured Output Mode)
-llm = ChatOllama(model="llama3", temperature=0, format="json")
+llm = ChatOllama(model=LLM_MODEL, temperature=0, format="json")
 
 # 3. The Extraction Prompt
 system_prompt = """
@@ -43,8 +37,11 @@ RELATIONSHIPS should be UPPERCASE (e.g., LOCATED_IN, MANAGED_BY).
 
 import sys
 
-def process_document(file_path: str = None):
-    print("Loading PDF using PyPDFLoader (Fallback)...")
+def process_document(file_path: str = None, status_callback=None):
+    msg = "Loading PDF using PyPDFLoader (Fallback)..."
+    print(msg)
+    if status_callback: status_callback(msg)
+    
     # Check for CLI argument or use default if not provided
     if not file_path:
         if len(sys.argv) > 1:
@@ -52,9 +49,14 @@ def process_document(file_path: str = None):
         else:
             file_path = "data/strategy_report.pdf"
     
-    print(f"Processing: {file_path}")
+    msg = f"Processing: {file_path}"
+    print(msg)
+    if status_callback: status_callback(msg)
+
     if not os.path.exists(file_path):
-        print(f"Error: File {file_path} not found.")
+        msg = f"Error: File {file_path} not found."
+        print(msg)
+        if status_callback: status_callback(msg)
         return
 
     loader = PyPDFLoader(file_path)
@@ -64,10 +66,14 @@ def process_document(file_path: str = None):
     splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
     chunks = splitter.split_documents(docs)
     
-    print(f"Processing {len(chunks)} chunks...")
+    msg = f"Processing {len(chunks)} chunks..."
+    print(msg)
+    if status_callback: status_callback(msg)
     
     for i, chunk in enumerate(chunks):
-        print(f"Extracting graph from chunk {i+1}...")
+        msg = f"Extracting graph from chunk {i+1}/{len(chunks)}..."
+        print(msg)
+        if status_callback: status_callback(msg)
         
         # Invoke Llama 3
         prompt = ChatPromptTemplate.from_messages([
@@ -92,6 +98,14 @@ def process_document(file_path: str = None):
             
             # Write to Neo4j
             # We use Cypher queries to merge nodes and relationships
+            
+            # 1. Create the Document Node first
+            doc_name = os.path.basename(file_path)
+            try:
+                graph.query("MERGE (d:Document {name: $name})", params={"name": doc_name})
+            except Exception as e:
+                print(f"Error creating Document node: {e}")
+
             for node in data.get("nodes", []):
                 # Sanitize inputs
                 node_type = node.get('type', 'Unknown').replace(" ", "_")
@@ -102,6 +116,14 @@ def process_document(file_path: str = None):
                 cypher = f"MERGE (n:{node_type} {{id: $id}})"
                 try:
                     graph.query(cypher, params={"id": node_id})
+                    
+                    # Link to Document
+                    link_cypher = f"""
+                    MATCH (n:{node_type} {{id: $id}}), (d:Document {{name: $doc_name}})
+                    MERGE (n)-[:MENTIONED_IN]->(d)
+                    """
+                    graph.query(link_cypher, params={"id": node_id, "doc_name": doc_name})
+                    
                 except Exception as e:
                     print(f"Error merging node {node_id}: {e}")
 
@@ -117,10 +139,12 @@ def process_document(file_path: str = None):
                     """
                     try:
                         graph.query(cypher, params={"source": source, "target": target})
+                        # Ideally link relationship to doc too, but node link is usually sufficient for cascading delete
                     except Exception as e:
                         print(f"Error merging relationship {source}->{target}: {e}")
                 
-            print(f"Chunk {i+1} saved to Graph!")
+            msg = f"Chunk {i+1} saved to Graph linked to {doc_name}!"
+            print(msg)
             
         except Exception as e:
             print(f"Error processing chunk {i+1}: {e}")

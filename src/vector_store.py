@@ -6,17 +6,17 @@ from langchain_community.vectorstores import Neo4jVector
 from dotenv import load_dotenv
 
 # 1. Setup
-load_dotenv()
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, EMBEDDING_MODEL, OLLAMA_BASE_URL
 
 from neo4j import GraphDatabase
 
 import sys
 
-def ingest_vectors(file_path: str = None):
-    print("Loading PDF for Vectorization...")
+def ingest_vectors(file_path: str = None, status_callback=None):
+    msg = "Loading PDF for Vectorization..."
+    print(msg)
+    if status_callback: status_callback(msg)
+
     # Check for CLI argument or use default if not provided
     if not file_path:
         if len(sys.argv) > 1:
@@ -24,24 +24,42 @@ def ingest_vectors(file_path: str = None):
         else:
             file_path = "data/strategy_report.pdf"
         
-    print(f"Processing: {file_path}")
+    msg = f"Processing: {file_path}"
+    print(msg)
+    if status_callback: status_callback(msg)
+
+    if not os.path.exists(file_path):
+        msg = f"Error: File {file_path} not found."
+        print(msg)
+        if status_callback: status_callback(msg)
+        return
+    
     loader = PyPDFLoader(file_path)
     docs = loader.load()
 
     # Split documents
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_documents(docs)
-    print(f"Created {len(chunks)} text chunks.")
+    
+    msg = f"Created {len(chunks)} text chunks."
+    print(msg)
+    if status_callback: status_callback(msg)
 
     # 2. Initialize Embedding Model (Nomic)
-    print("Initializing Ollama Embeddings...")
+    msg = "Initializing Ollama Embeddings..."
+    print(msg)
+    if status_callback: status_callback(msg)
+    
     embeddings_model = OllamaEmbeddings(
-        model="nomic-embed-text",
-        base_url="http://127.0.0.1:11434"
+        model=EMBEDDING_MODEL,
+        base_url=OLLAMA_BASE_URL
     )
 
     # 3. Generate Embeddings Manually
-    print("Generating embeddings... (This may take a while)")
+    msg = "Generating embeddings... (This may take a while)"
+    print(msg)
+    if status_callback: status_callback(msg)
+    
     texts = [c.page_content for c in chunks]
     embeddings_list = embeddings_model.embed_documents(texts)
     
@@ -56,7 +74,10 @@ def ingest_vectors(file_path: str = None):
         })
 
     # 4. Insert into Neo4j using compatible Cypher
-    print("Connecting to Neo4j...")
+    msg = "Connecting to Neo4j..."
+    print(msg)
+    if status_callback: status_callback(msg)
+    
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
     
     insert_query = """
@@ -89,21 +110,30 @@ def ingest_vectors(file_path: str = None):
             # print("Clearing old Chunks...")
             # session.run("MATCH (c:Chunk) DETACH DELETE c")
 
-            print("Creating Vector Index...")
+            msg = "Creating Vector Index..."
+            print(msg)
+            if status_callback: status_callback(msg)
             session.run(index_query)
             
-            print("Inserting Data...")
+            msg = "Inserting Data..."
+            print(msg)
+            if status_callback: status_callback(msg)
             session.run(insert_query, data=data_to_insert)
             
-        print("Vector Indexing Complete!")
+        msg = "Vector Indexing Complete!"
+        print(msg)
+        if status_callback: status_callback(msg)
+        
     except Exception as e:
-        print(f"Error during ingestion: {e}")
+        msg = f"Error during ingestion: {e}"
+        print(msg)
+        if status_callback: status_callback(msg)
     finally:
         driver.close()
 
 def get_retriever():
     """Returns a Neo4jVector retriever."""
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL)
     try:
         vector_index = Neo4jVector.from_existing_graph(
             embeddings,
