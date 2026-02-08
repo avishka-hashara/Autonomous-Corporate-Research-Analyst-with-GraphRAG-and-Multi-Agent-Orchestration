@@ -20,6 +20,7 @@ class AgentState(TypedDict):
     answer: str
     critique: str
     attempts: int
+    selected_sources: List[str] # Filtering context
 
 from config import LLM_MODEL
 
@@ -83,9 +84,14 @@ def vector_search_node(state: AgentState):
     plan = state["plan"]
     query = plan.get("query", state["question"])
     
+    
     print(f"--- [VECTOR SEARCH] {query} ---")
     
-    results = search_vectors(query)
+    selected_sources = state.get("selected_sources", [])
+    if selected_sources:
+        print(f"    Filtering by: {selected_sources}")
+
+    results = search_vectors(query, file_filters=selected_sources)
 
     return {"documents": state.get("documents", []) + results}
 
@@ -107,6 +113,11 @@ def graph_search_node(state: AgentState):
     - 'nodes' table: id, type, properties (JSON)
     - 'edges' table: source, target, type, properties (JSON)
     
+    IMPORTANT: Use MySQL compatible JSON syntax. Do NOT use PostgreSQL operators like ->> or @>.
+    - To filter by JSON property: JSON_EXTRACT(properties, '$.p_name') = 'value'
+    - To check if JSON contains key/value: JSON_CONTAINS(properties, '{{"key": "value"}}')
+    - To check if JSON contains a value: JSON_SEARCH(properties, 'one', 'value') IS NOT NULL
+    
     To find relationships, JOIN edges with nodes.
     Example: 
     SELECT s.id AS source, t.id AS target, e.type 
@@ -121,7 +132,7 @@ def graph_search_node(state: AgentState):
     try:
         
         prompt = ChatPromptTemplate.from_messages([
-             ("system", "You are a TiDB SQL expert."),
+             ("system", "You are a TiDB SQL expert. Use MySQL 8.0 JSON syntax."),
              ("human", sql_prompt)
         ])
         chain = prompt | json_llm

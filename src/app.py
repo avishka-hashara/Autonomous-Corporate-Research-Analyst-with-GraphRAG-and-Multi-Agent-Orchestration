@@ -126,6 +126,22 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("###### Powered by LangGraph & TiDB")
 
+    # Document Selector
+    try:
+        from manage_data import list_documents
+        available_docs = list_documents()
+        if available_docs:
+            st.markdown("### 📂 Filter Context")
+            selected_docs = st.multiselect(
+                "Select documents to search:",
+                options=available_docs,
+                default=[],
+                help="If empty, searches all documents.",
+                key="selected_docs" 
+            )
+    except Exception as e:
+        st.error(f"Error loading docs: {e}")
+
 
 # --- Main Layout with Tabs ---
 tab1, tab2 = st.tabs(["💬 Analyst Chat", "🗂️ Knowledge Base"])
@@ -159,7 +175,20 @@ with tab1:
             
             with status_placeholder.status("Thinking...", expanded=True) as status:
                 try:
-                    inputs = {"question": prompt}
+                    # Get selected documents from sidebar if any
+                    # We need to move the list_documents logical call here or use session state if the sidebar one isn't accessible
+                    # Ideally, we should capture the selection from the sidebar.
+                    
+                    # BUT: The sidebar code runs before this. We need to store the selection in a variable.
+                    # Since st.multiselect returns the list, let's grab it from session state or a variable if we refactor.
+                    # EASIER: Just place the multiselect inside the sidebar block and store in session_state, OR re-read the widget here?
+                    # Streamlit widgets return values. We need to capture the sidebar return value.
+                    pass 
+                    
+                    inputs = {
+                        "question": prompt,
+                        "selected_sources": st.session_state.get("selected_docs", [])
+                    }
                     # Placeholder for graph visualization (future)
                     
                     for output in agent_app.stream(inputs):

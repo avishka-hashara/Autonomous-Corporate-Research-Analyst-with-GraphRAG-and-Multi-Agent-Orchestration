@@ -75,14 +75,14 @@ def ingest_vectors(file_path: str = None, status_callback=None):
     print(msg)
     if status_callback: status_callback(msg)
 
-def search_vectors(query: str):
+def search_vectors(query: str, file_filters: list = None):
     """Simple wrapper for vector search using TiDB."""
     try:
         embeddings_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
         query_embedding = embeddings_model.embed_query(query)
         
         graph = TiDBGraph()
-        results = graph.search_vectors(query_embedding, top_k=5)
+        results = graph.search_vectors(query_embedding, top_k=5, file_filters=file_filters)
         
         return [f"Source: {row['source']} (Page {row['page']})\nContent: {row['content']}" for row in results]
     except Exception as e:

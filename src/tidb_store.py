@@ -213,17 +213,43 @@ class TiDBGraph:
         """
         self.query(sql, (content, source, page, embedding_str))
 
-    def search_vectors(self, query_embedding, top_k=5):
-        """Searches for similar chunks using Cosine Distance."""
+    def search_vectors(self, query_embedding, top_k=5, file_filters=None):
+        """Searches for similar chunks using Cosine Distance, optionally filtering by source file."""
         embedding_str = str(query_embedding)
-        sql = """
+        
+        where_clause = ""
+        params = [embedding_str]
+        
+        if file_filters:
+            # Create placeholders for the IN clause
+            # We use LIKE matches because the source column might be a full path while filter is just filename
+            # OR we can assume file_filters are substrings.
+            # Let's use a logic where we check if source ends with any of the filters
+            # This is robust because source usually stores relative or absolute path ending with filename.
+             
+            # Constructing a dynamic OR clause: (source LIKE %f1 OR source LIKE %f2 ...)
+            conditions = []
+            img_params = []
+            for f in file_filters:
+                conditions.append("source LIKE %s")
+                # Add wildcard before filename to match full path ending with filename
+                img_params.append(f"%{f}")
+            
+            if conditions:
+                where_clause = "WHERE (" + " OR ".join(conditions) + ")"
+                params.extend(img_params)
+        
+        params.append(top_k)
+
+        sql = f"""
             SELECT content, source, page, 
                    VEC_COSINE_DISTANCE(embedding, VEC_FROM_TEXT(%s)) AS distance
             FROM chunks
+            {where_clause}
             ORDER BY distance ASC
             LIMIT %s;
         """
-        return self.query(sql, (embedding_str, top_k))
+        return self.query(sql, tuple(params))
 
     def clear_data(self):
         """Clears all data from tables (for testing)."""

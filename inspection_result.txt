@@ -1,0 +1,122 @@
+--- DATABASE INSPECTION ---
+
+--- NODES (First 5) ---
+{
+  "id": "$0.62",
+  "type": "Concept",
+  "properties": {
+    "id": "$0.62"
+  },
+  "created_at": "2026-02-08 12:28:30"
+}
+----------------------------------------
+{
+  "id": "$0.68",
+  "type": "Concept",
+  "properties": {
+    "id": "$0.68"
+  },
+  "created_at": "2026-02-08 12:28:30"
+}
+----------------------------------------
+{
+  "id": "$18,550",
+  "type": "Concept",
+  "properties": {
+    "id": "$18,550"
+  },
+  "created_at": "2026-02-08 12:28:30"
+}
+----------------------------------------
+{
+  "id": "$2.48",
+  "type": "Concept",
+  "properties": {
+    "id": "$2.48"
+  },
+  "created_at": "2026-02-08 12:28:30"
+}
+----------------------------------------
+{
+  "id": "$2.72",
+  "type": "Concept",
+  "properties": {
+    "id": "$2.72"
+  },
+  "created_at": "2026-02-08 12:28:30"
+}
+----------------------------------------
+
+--- EDGES (First 5) ---
+{
+  "source": "$0.62",
+  "target": "TechCorp",
+  "type": "AMOUNT",
+  "properties": {},
+  "created_at": "2026-02-08 12:28:31"
+}
+----------------------------------------
+{
+  "source": "$0.68",
+  "target": "TechCorp",
+  "type": "AMOUNT",
+  "properties": {},
+  "created_at": "2026-02-08 12:28:31"
+}
+----------------------------------------
+{
+  "source": "$18,550",
+  "target": "TechCorp",
+  "type": "AMOUNT",
+  "properties": {},
+  "created_at": "2026-02-08 12:28:31"
+}
+----------------------------------------
+{
+  "source": "$2.48",
+  "target": "TechCorp",
+  "type": "AMOUNT",
+  "properties": {},
+  "created_at": "2026-02-08 12:28:31"
+}
+----------------------------------------
+{
+  "source": "$2.72",
+  "target": "TechCorp",
+  "type": "AMOUNT",
+  "properties": {},
+  "created_at": "2026-02-08 12:28:31"
+}
+----------------------------------------
+
+--- CHUNKS (First 5) ---
+ID: 1
+Source: data/uploaded\google_privacy_policy_en.pdf
+Page: 0
+Date: 2026-02-08 10:31:55
+Content (preview): Privacy Policy  Last modified: December 18, 2017 ( view archived versions ) (The hyperlinked examples are available at the end of this  document.)  There are many different ways you can use our servic...
+----------------------------------------
+ID: 2
+Source: data/uploaded\google_privacy_policy_en.pdf
+Page: 0
+Date: 2026-02-08 10:31:57
+Content (preview): The choices we offer, including how to access and update information.  We’ve tried to keep it as simple as possible, but if you’re not familiar with terms like cookies, IP addresses, pixel tags and  b...
+----------------------------------------
+ID: 3
+Source: data/uploaded\google_privacy_policy_en.pdf
+Page: 0
+Date: 2026-02-08 10:32:00
+Content (preview): YouTube videos you might like.  We collect information in the following ways:  Information you give us.  For example, many of our services require you to sign up for a Google Account. When you  do, we...
+----------------------------------------
+ID: 4
+Source: data/uploaded\google_privacy_policy_en.pdf
+Page: 0
+Date: 2026-02-08 10:32:01
+Content (preview): interact with our ads  and content. This information includes:  Device information  We collect device-specific information  (such as your hardware model, operating system version, unique device  ident...
+----------------------------------------
+ID: 5
+Source: data/uploaded\google_privacy_policy_en.pdf
+Page: 1
+Date: 2026-02-08 10:32:03
+Content (preview): language, the date and time of your request and referral URL.  cookies that may uniquely identify your browser or your Google Account.  Location information  When you use Google services, we may colle...
+----------------------------------------
