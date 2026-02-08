@@ -1,85 +1,55 @@
-# Autonomous Corporate Research Analyst (Cognitive Enterprise Architect)
+# Corporate Analyst Agent
 
-This is an advanced AI agent designed to analyze corporate strategy documents using a **GraphRAG** approach and **Agentic State Machine** orchestration.
+An autonomous research assistant capable of knowledge graph extraction and vector-based strategy analysis. Powered by **Llama 3 (via Groq)** and **TiDB Serverless**.
 
-![Corporate Analyst Agent Interface](assets/interface_preview.png)
+![Corporate Analyst Agent](https://img.icons8.com/clouds/200/company.png)
 
-## 🧠 System Architecture
+## Features
+*   **Knowledge Graph Extraction**: Converts PDF documents into structured graph data (Nodes/Edges).
+*   **Vector Search**: Hybrid search using `sentence-transformers` for semantic similarity.
+*   **Context-Aware**: Answers questions strictly from the provided context (no hallucination).
+*   **Cloud Native**: Zero local dependencies (no Ollama, no Neo4j required).
 
-The system follows a **Supervisor-Worker-Reviewer** pattern using **LangGraph**:
+## 🚀 Deployment Guide
 
-1.  **Supervisor Node**:
-    - Routes tasks to `VectorSearch` (unstructured text) or `GraphSearch` (relationships).
-2.  **Worker Nodes**:
-    - **VectorSearch**: Semantically searches text chunks.
-    - **GraphSearch**: Generates Cypher queries for the Neo4j Knowledge Graph.
-3.  **Generator Node**:
-    - Synthesizes answers from all sources.
-4.  **Reviewer Node**:
-    - Self-corrects answers for faithfulness and relevance.
+This app is designed to be deployed on **Streamlit Cloud** (Recommended), Render, or Railway.
 
-## 🚀 Key Features
+### Option 1: Streamlit Cloud (Fastest & Free)
 
-*   **📂 Dynamic File Upload**: Upload PDF reports directly via the UI.
-*   **️ Resource Management**: View and delete ingested documents and their associated graph data.
-*   **Hybrid RAG**: Combines Vector embeddings with Graph connections.
-
-## 🛠️ Prerequisites
-
-1.  **Python 3.10+**
-2.  **Neo4j Database**:
-    - Local or Docker (`bolt://localhost:7687`).
-    - APOC plugin enabled.
-3.  **Ollama**:
-    - `llama3` (Logic/Generation)
-    - `nomic-embed-text` (Embeddings)
-
-## 📦 Installation
-
-1.  **Clone & Setup venv**:
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\Activate.ps1
+1.  **Fork/Push** this repository to your GitHub.
+2.  Go to [share.streamlit.io](https://share.streamlit.io/).
+3.  Click **New App** and select your repository.
+4.  **Main file path**: `src/app.py`
+5.  **Advanced Settings** -> **Secrets**:
+    Copy the contents of your `.env` file into the Secrets text area TOML format:
+    ```toml
+    GROQ_API_KEY = "gsk_..."
+    TIDB_HOST = "gateway01.ap-southeast-1.prod.aws.tidbcloud.com"
+    TIDB_PORT = 4000
+    TIDB_USER = "..."
+    TIDB_PASSWORD = "..."
+    TIDB_DATABASE = "test"
+    TIDB_CA_PATH = "" # Leave empty for cloud
+    LLM_MODEL = "llama-3.1-8b-instant"
+    EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
     ```
+6.  Click **Deploy**! 🎈
 
-2.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+### Option 2: Docker (Render/Railway)
 
-3.  **Configure `.env`**:
-    Create a `.env` file with your credentials:
-    ```env
-    NEO4J_URI=bolt://localhost:7687
-    NEO4J_USERNAME=neo4j
-    NEO4J_PASSWORD=your_password
-    ```
-    *Note: Advanced configuration can be modified in `src/config.py`.*
+1.  This repo includes a `Dockerfile`.
+2.  Deploy to Render/Railway and set the **Environment Variables** (same as above) in their dashboard.
+3.  **Command**: `streamlit run src/app.py`
 
-## ⚡ Quick Start
+## 🛠️ Local Development
 
-1.  **Run the App**:
-    ```bash
-    streamlit run src/app.py
-    ```
-    *The app will automatically check connections to Neo4j and Ollama on startup.*
+1.  Clone repo.
+2.  `pip install -r requirements.txt`
+3.  Set up `.env` file.
+4.  `streamlit run src/app.py`
 
-
-2.  **Upload Data**:
-    - Go to the **"📂 Document Upload"** sidebar.
-    - Upload a PDF (e.g., a strategy report).
-    - Click **"Process Document"**.
-
-3.  **Explore**:
-    - **💬 Chat**: Ask questions like "What are the key risks?".
-    - **️ Manage Resources**: View or delete your files.
-
-## 📂 Key Files
-
-*   `src/app.py`: Main Streamlit application.
-*   `src/graph_agent.py`: Agentic workflow definition.
-*   `src/ingest.py`: PDF ETL pipeline (LLM extraction).
-*   `src/config.py`: Centralized configuration.
-
-
-2-WLQr6FcEU1GThqiXJ97Der-PKOnOa6Gsf3AXyvghE
+## System Architecture
+*   **Frontend**: Streamlit
+*   **Orchestration**: LangGraph
+*   **LLM**: Groq (Llama 3.1)
+*   **Database**: TiDB Serverless (Vector + Graph)

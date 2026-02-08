@@ -3,17 +3,19 @@ import json
 import re
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.graphs import Neo4jGraph
+from langchain_community.graphs import Neo4jGraph # Keeping for reference if needed, but we use TiDBGraph now
+from tidb_store import TiDBGraph
+
 # 1. Setup
-from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, LLM_MODEL
+from config import LLM_MODEL
 
 # Initialize Graph
-graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD)
+graph = TiDBGraph()
 
 # 2. The Llama 3 Model (Structured Output Mode)
-llm = ChatOllama(model=LLM_MODEL, temperature=0, format="json")
+llm = ChatGroq(model=LLM_MODEL, temperature=0).bind(response_format={"type": "json_object"})
 
 # 3. The Extraction Prompt
 system_prompt = """
@@ -99,53 +101,62 @@ def process_document(file_path: str = None, status_callback=None):
             # Write to Neo4j
             # We use Cypher queries to merge nodes and relationships
             
-            # 1. Create the Document Node first
+            # Write to TiDB (Graph)
+            # We collect all nodes and edges for this chunk and insert in one batch
+            
+            batch_nodes = []
+            batch_edges = []
+            
+            # 1. Document Node
             doc_name = os.path.basename(file_path)
-            try:
-                graph.query("MERGE (d:Document {name: $name})", params={"name": doc_name})
-            except Exception as e:
-                print(f"Error creating Document node: {e}")
+            batch_nodes.append({
+                "id": doc_name,
+                "type": "Document",
+                "properties": {"name": doc_name}
+            })
 
+            # 2. Extracted Nodes
             for node in data.get("nodes", []):
                 # Sanitize inputs
                 node_type = node.get('type', 'Unknown').replace(" ", "_")
                 node_id = node.get('id', 'Unknown')
                 
-                # Note: node labels cannot be parameterized in Cypher (e.g. :Person), but properties can.
-                # We trust node_type enough (simple string replace) but id should be param.
-                cypher = f"MERGE (n:{node_type} {{id: $id}})"
-                try:
-                    graph.query(cypher, params={"id": node_id})
-                    
-                    # Link to Document
-                    link_cypher = f"""
-                    MATCH (n:{node_type} {{id: $id}}), (d:Document {{name: $doc_name}})
-                    MERGE (n)-[:MENTIONED_IN]->(d)
-                    """
-                    graph.query(link_cypher, params={"id": node_id, "doc_name": doc_name})
-                    
-                except Exception as e:
-                    print(f"Error merging node {node_id}: {e}")
+                batch_nodes.append({
+                    "id": node_id,
+                    "type": node_type,
+                    "properties": {"id": node_id}
+                })
+                
+                # Link to Document
+                batch_edges.append({
+                    "source": node_id,
+                    "target": doc_name,
+                    "type": "MENTIONED_IN",
+                    "properties": {}
+                })
 
+            # 3. Extracted Relationships
             for rel in data.get("relationships", []):
                 source = rel.get('source', '')
                 target = rel.get('target', '')
                 rel_type = rel.get('type', 'RELATED_TO').upper().replace(" ", "_")
                 
                 if source and target:
-                    cypher = f"""
-                    MATCH (a {{id: $source}}), (b {{id: $target}})
-                    MERGE (a)-[:{rel_type}]->(b)
-                    """
-                    try:
-                        graph.query(cypher, params={"source": source, "target": target})
-                        # Ideally link relationship to doc too, but node link is usually sufficient for cascading delete
-                    except Exception as e:
-                        print(f"Error merging relationship {source}->{target}: {e}")
-                
-            msg = f"Chunk {i+1} saved to Graph linked to {doc_name}!"
-            print(msg)
+                    batch_edges.append({
+                        "source": source,
+                        "target": target,
+                        "type": rel_type,
+                        "properties": {}
+                    })
             
+            # Execute Batch Insert covering all nodes and edges for this chunk
+            try:
+                graph.batch_insert_graph_data(batch_nodes, batch_edges)
+                msg = f"Chunk {i+1} saved to Graph linked to {doc_name}!"
+                print(msg)
+            except Exception as e:
+                print(f"Error saving batch for chunk {i+1}: {e}")
+
         except Exception as e:
             print(f"Error processing chunk {i+1}: {e}")
 

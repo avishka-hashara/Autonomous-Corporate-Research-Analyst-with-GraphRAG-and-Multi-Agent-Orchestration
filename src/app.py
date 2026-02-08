@@ -36,28 +36,41 @@ def check_system_health():
     """Checks if Neo4j and Ollama are reachable."""
     health_status = []
     
-    # Check Neo4j
+    # Check TiDB
     try:
-        from neo4j import GraphDatabase
-        from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
-        driver.verify_connectivity()
-        health_status.append(("Neo4j", "Connected", "✅"))
-    except Exception:
-        health_status.append(("Neo4j", "Disconnected", "❌"))
-
-    # Check Ollama
-    try:
-        import requests
-        from config import OLLAMA_BASE_URL
-        res = requests.get(f"{OLLAMA_BASE_URL}")
-        if res.status_code == 200:
-            health_status.append(("Ollama", "Connected", "✅"))
+        from tidb_store import TiDBGraph
+        graph = TiDBGraph()
+        conn = graph.get_connection()
+        if conn.is_connected():
+            health_status.append(("TiDB", "Connected", "✅"))
+            conn.close()
         else:
-            health_status.append(("Ollama", "Error", "⚠️"))
+            health_status.append(("TiDB", "Disconnected", "❌"))
+    except Exception as e:
+        health_status.append(("TiDB", f"Error: {e}", "❌"))
+
+    # Check Embeddings Model (HuggingFace)
+    try:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        from config import EMBEDDING_MODEL
+        if EMBEDDING_MODEL:
+            health_status.append(("Embeddings (HF)", "Ready", "✅"))
+        else:
+             health_status.append(("Embeddings", "Config Missing", "⚠️"))
+    except Exception as e:
+         health_status.append(("Embeddings", f"Error: {e}", "❌"))
+
+    # Check Groq (for LLM)
+    try:
+        from config import LLM_MODEL
+        import os
+        if os.getenv("GROQ_API_KEY"):
+            health_status.append(("Groq (LLM)", "Ready", "✅"))
+        else:
+             health_status.append(("Groq", "Missing API Key", "❌"))
     except Exception:
-         health_status.append(("Ollama", "Disconnected", "❌"))
-         
+        health_status.append(("Groq", "Error", "❌"))
+
     return health_status
 
 # --- Sidebar ---
@@ -111,7 +124,7 @@ with st.sidebar:
                     st.error(f"Error: {e}")
 
     st.markdown("---")
-    st.markdown("###### Powered by LangGraph & Neo4j")
+    st.markdown("###### Powered by LangGraph & TiDB")
 
 
 # --- Main Layout with Tabs ---

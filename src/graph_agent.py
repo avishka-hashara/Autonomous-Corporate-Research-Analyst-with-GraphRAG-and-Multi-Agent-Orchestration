@@ -3,8 +3,8 @@ import json
 from typing import TypedDict, List, Literal
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
-from langchain_community.graphs import Neo4jGraph
+from langchain_groq import ChatGroq
+from tidb_store import TiDBGraph
 from langchain_core.output_parsers import JsonOutputParser
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
@@ -21,12 +21,12 @@ class AgentState(TypedDict):
     critique: str
     attempts: int
 
-from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, LLM_MODEL
+from config import LLM_MODEL
 
 # --- 2. Tool Setup ---
-graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD)
-llm = ChatOllama(model=LLM_MODEL, temperature=0)
-json_llm = ChatOllama(model=LLM_MODEL, temperature=0, format="json")
+graph = TiDBGraph()
+llm = ChatGroq(model=LLM_MODEL, temperature=0)
+json_llm = ChatGroq(model=LLM_MODEL, temperature=0).bind(response_format={"type": "json_object"})
 
 # --- 3. Nodes ---
 
@@ -91,38 +91,47 @@ def vector_search_node(state: AgentState):
 
 def graph_search_node(state: AgentState):
     """
-    Executes a Cypher query.
+    Executes a SQL query on TiDB.
     """
     plan = state["plan"]
     query = plan.get("query", state["question"])
     
     print(f"--- [GRAPH SEARCH] {query} ---")
     
-    # We use LLM to gen Cypher
-    cypher_prompt = """
-    Task: Generate Cypher for: {query}
+    # We use LLM to gen SQL
+    sql_prompt = """
+    Task: Generate SQL for: {query}
     Schema: {schema}
-    Return ONLY JSON: {{"cypher": "MATCH ...", "reasoning": "..."}}
+    
+    The database contains a graph structure in 'nodes' and 'edges' tables.
+    - 'nodes' table: id, type, properties (JSON)
+    - 'edges' table: source, target, type, properties (JSON)
+    
+    To find relationships, JOIN edges with nodes.
+    Example: 
+    SELECT s.id AS source, t.id AS target, e.type 
+    FROM edges e 
+    JOIN nodes s ON e.source = s.id 
+    JOIN nodes t ON e.target = t.id 
+    WHERE s.id LIKE '%Keywords%';
+    
+    Return ONLY JSON: {{"sql": "SELECT ...", "reasoning": "..."}}
     """
     
     try:
-        # Using prompt template for safety here too, although string format is also fine if schema is safe.
-        # But for consistency let's use invoke with the prompt string if using ChatOllama directly supports it, 
-        # or format it manually safely. ChatOllama.invoke takes string or messages.
-        # Let's use simple python format safely or construct proper messages.
         
         prompt = ChatPromptTemplate.from_messages([
-             ("system", "You are a Neo4j Cypher expert."),
-             ("human", cypher_prompt)
+             ("system", "You are a TiDB SQL expert."),
+             ("human", sql_prompt)
         ])
         chain = prompt | json_llm
-        response = chain.invoke({"query": query, "schema": graph.schema})
+        response = chain.invoke({"query": query, "schema": graph.get_schema()})
         
-        cypher_json = json.loads(response.content)
-        cypher = cypher_json.get("cypher")
+        sql_json = json.loads(response.content)
+        sql = sql_json.get("sql")
         
-        print(f"Executing: {cypher}")
-        result = graph.query(cypher)
+        print(f"Executing: {sql}")
+        result = graph.query(sql)
         doc = f"Graph Result for '{query}': {result}"
         
     except Exception as e:
@@ -135,12 +144,17 @@ def generator_node(state: AgentState):
     Generates the final answer based on gathered documents.
     """
     question = state["question"]
-    docs = "\n\n".join(state.get("documents", []))
+    documents = state.get("documents", [])
+    
+    if not documents:
+        print("--- [GENERATOR] No documents found. ---")
+        return {"answer": "I cannot answer this question because no relevant information was found in the knowledge base. Please upload a relevant document."}
+
+    docs = "\n\n".join(documents)
     print(f"--- [GENERATOR] Generating Answer... ---")
     
     system = """You are a Corporate Analyst. Answer the question based ONLY on the provided context.
-    Cite your sources if possible.
-    """
+    If the answer is not in the context, state that you don't know."""
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system),

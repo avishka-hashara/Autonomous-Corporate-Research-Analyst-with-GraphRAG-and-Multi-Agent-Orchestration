@@ -1,29 +1,40 @@
 import os
-import traceback
-from langchain_community.graphs import Neo4jGraph
+import sys
+
+# Add src to path if running from root
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+from src.tidb_store import TiDBGraph
 from dotenv import load_dotenv
 
-# 1. Setup
 load_dotenv()
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-print(f"Connecting to: {NEO4J_URI} as {NEO4J_USERNAME}")
+def verify_tidb():
+    print("Connecting to TiDB...")
+    try:
+        graph = TiDBGraph()
+        print("Connected.")
+        
+        # Check Node Count
+        nodes = graph.query("SELECT COUNT(*) as count FROM nodes")
+        print(f"Nodes: {nodes[0]['count']}")
+        
+        # Check Edge Count
+        edges = graph.query("SELECT COUNT(*) as count FROM edges")
+        print(f"Edges: {edges[0]['count']}")
+        
+        # Check Chunk Count
+        chunks = graph.query("SELECT COUNT(*) as count FROM chunks")
+        print(f"Chunks: {chunks[0]['count']}")
+        
+        # Sample Data
+        print("\nSample Nodes:")
+        sample_nodes = graph.query("SELECT * FROM nodes LIMIT 5")
+        for node in sample_nodes:
+            print(node)
+            
+    except Exception as e:
+        print(f"Error verification failed: {e}")
 
-try:
-    graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD)
-    print("Connected to Neo4j.")
-
-    print("Running query: MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m")
-    result = graph.query("MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 100")
-    
-    if not result:
-        print("Graph is empty.")
-    else:
-        print(f"Found {len(result)} records:")
-        for record in result:
-            print(record)
-
-except Exception:
-    traceback.print_exc()
+if __name__ == "__main__":
+    verify_tidb()

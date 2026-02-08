@@ -1,42 +1,44 @@
 import os
-from neo4j import GraphDatabase
+import sys
+
+# Add src to path if running from root
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from src.config import UPLOAD_DIR
+from src.tidb_store import TiDBGraph
+import shutil
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-
-def reset_database():
-    """
-    Clears all nodes, relationships, and indexes from the Neo4j database.
-    """
-    print("WARNING: This will delete ALL data in the Neo4j database.")
+def reset_db():
+    print("WARNING: This will delete ALL data in the TiDB Graph and Vector store.")
+    print(f"WARNING: This will also delete ALL local files in {UPLOAD_DIR}")
     confirm = input("Are you sure? (y/n): ")
-    if confirm.lower() != 'y':
-        print("Operation cancelled.")
-        return
-
-    try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
-        with driver.session() as session:
-            # Delete all nodes and relationships
-            print("Deleting all nodes and relationships...")
-            session.run("MATCH (n) DETACH DELETE n")
+    
+    if confirm.lower() == 'y':
+        try:
+            # 1. Clear Database
+            graph = TiDBGraph()
+            graph.clear_data()
+            print("Database cleared successfully.")
             
-            # Drop vector index if exists
-            print("Dropping vector index...")
-            try:
-                session.run("DROP INDEX strategy_vector_index")
-            except Exception as e:
-                print(f"Index might not exist or verify name: {e}")
-
-        print("Database Reset Complete.")
-        driver.close()
-    except Exception as e:
-        print(f"Error resetting database: {e}")
+            # 2. Clear Local Files
+            if os.path.exists(UPLOAD_DIR):
+                for filename in os.listdir(UPLOAD_DIR):
+                    if filename.endswith(".pdf"):
+                        file_path = os.path.join(UPLOAD_DIR, filename)
+                        try:
+                            os.remove(file_path)
+                            print(f"Deleted {filename}")
+                        except Exception as e:
+                            print(f"Error deleting {filename}: {e}")
+            print("Local files cleared.")
+            
+        except Exception as e:
+            print(f"Error clearing database: {e}")
+    else:
+        print("Reset cancelled.")
 
 if __name__ == "__main__":
-    reset_database()
+    reset_db()
