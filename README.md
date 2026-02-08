@@ -3,7 +3,7 @@
 > **An Autonomous AI Research Assistant specifically designed for Corporate Strategy & Analysis.**  
 > Powered by **Llama 3**, **LangGraph**, and **TiDB Serverless**.
 
-![Corporate Analyst Agent](https://img.icons8.com/clouds/200/company.png)
+![Corporate Analyst Agent](assets/home.png)
 
 ## 📖 Overview
 
