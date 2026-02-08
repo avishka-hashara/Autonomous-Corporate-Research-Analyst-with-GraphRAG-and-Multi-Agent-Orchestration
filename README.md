@@ -1,55 +1,68 @@
-# Corporate Analyst Agent
+# 🤖 Corporate Analyst Agent
 
-An autonomous research assistant capable of knowledge graph extraction and vector-based strategy analysis. Powered by **Llama 3 (via Groq)** and **TiDB Serverless**.
+> **An Autonomous AI Research Assistant specifically designed for Corporate Strategy & Analysis.**  
+> Powered by **Llama 3**, **LangGraph**, and **TiDB Serverless**.
 
 ![Corporate Analyst Agent](https://img.icons8.com/clouds/200/company.png)
 
-## Features
-*   **Knowledge Graph Extraction**: Converts PDF documents into structured graph data (Nodes/Edges).
-*   **Vector Search**: Hybrid search using `sentence-transformers` for semantic similarity.
-*   **Context-Aware**: Answers questions strictly from the provided context (no hallucination).
-*   **Cloud Native**: Zero local dependencies (no Ollama, no Neo4j required).
+## 📖 Overview
 
-## 🚀 Deployment Guide
+The **Corporate Analyst Agent** is a next-generation AI tool capable of performing deep research on complex corporate documents. Unlike traditional chatbots that simply predict the next word, this agent uses a **Cognitive Architecture** to plan, research, and verify information.
 
-This app is designed to be deployed on **Streamlit Cloud** (Recommended), Render, or Railway.
+It combines **Knowledge Graphs** (to understand entities like *CEO*, *Competitor*, *Acquisition*) with **Vector Search** (to understand semantic meaning), ensuring that every answer is grounded strictly in the provided data.
 
-### Option 1: Streamlit Cloud (Fastest & Free)
+## 🎯 The Problem Solved
 
-1.  **Fork/Push** this repository to your GitHub.
-2.  Go to [share.streamlit.io](https://share.streamlit.io/).
-3.  Click **New App** and select your repository.
-4.  **Main file path**: `src/app.py`
-5.  **Advanced Settings** -> **Secrets**:
-    Copy the contents of your `.env` file into the Secrets text area TOML format:
-    ```toml
-    GROQ_API_KEY = "gsk_..."
-    TIDB_HOST = "gateway01.ap-southeast-1.prod.aws.tidbcloud.com"
-    TIDB_PORT = 4000
-    TIDB_USER = "..."
-    TIDB_PASSWORD = "..."
-    TIDB_DATABASE = "test"
-    TIDB_CA_PATH = "" # Leave empty for cloud
-    LLM_MODEL = "llama-3.1-8b-instant"
-    EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-    ```
-6.  Click **Deploy**! 🎈
+Standard RAG (Retrieval-Augmented Generation) systems often fail on complex queries like *"How does the new regulation affect the subsidiary's risk profile?"* because they only look for matching keywords.
 
-### Option 2: Docker (Render/Railway)
+**This Agent solves that by:**
+1.  **Extracting Structure**: It builds a graph of relationships from the document.
+2.  **Multi-Step Reasoning**: It breaks down complex questions into sub-tasks (e.g., "Find subsidiary", "Check regulations", "Analyze risk").
+3.  **No Hallucinations**: It explicitly refuses to answer if the information is not in the source text.
 
-1.  This repo includes a `Dockerfile`.
-2.  Deploy to Render/Railway and set the **Environment Variables** (same as above) in their dashboard.
-3.  **Command**: `streamlit run src/app.py`
+## ✨ Key Capabilities
 
-## 🛠️ Local Development
+*   **🕵️‍♂️ Autonomous Research**: The agent assumes the role of a "Supervisor" and assigns tasks to specialized workers ("Vector Searcher" and "Graph Searcher").
+*   **🕸️ Knowledge Graph Extraction**: Automatically identifies and maps relationships between people, organizations, and concepts.
+*   **🧠 Hybrid Intelligence**: Merges structured graph data with unstructured textual analysis for superior accuracy.
+*   **⚡ Real-Time Processing**: optimized for speed and accuracy using Groq's LPU inference engine.
+*   **📱 Modern Experience**: Features a "Premium Dark Mode" interface designed for professional analysts, fully responsive on all devices.
 
-1.  Clone repo.
-2.  `pip install -r requirements.txt`
-3.  Set up `.env` file.
-4.  `streamlit run src/app.py`
+## 🏗️ How It Works
 
-## System Architecture
-*   **Frontend**: Streamlit
-*   **Orchestration**: LangGraph
-*   **LLM**: Groq (Llama 3.1)
-*   **Database**: TiDB Serverless (Vector + Graph)
+The system operates as a multi-agent workflow:
+
+```mermaid
+graph TD
+    User[User Uploads PDF] --> Ingest[Ingestion Engine]
+    Ingest -->|Structure| KnowledgeGraph[(Knowledge Graph)]
+    Ingest -->|Semantics| VectorDB[(Vector Database)]
+    
+    User[User Asks Question] --> Supervisor[Supervisor Agent]
+    Supervisor -->|Why?| Planner{Research Plan}
+    
+    Planner -->|Need Specifics| VectorWorker[Vector Search Agent]
+    Planner -->|Need Relationships| GraphWorker[Graph Search Agent]
+    
+    VectorWorker -->|Retrieve| VectorDB
+    GraphWorker -->|Query| KnowledgeGraph
+    
+    VectorWorker & GraphWorker --> Generator[Analyst Agent]
+    Generator -->|Draft| Reviewer[Compliance Reviewer]
+    Reviewer -->|Verified Answer| User
+```
+
+## 🛠️ Technology Stack
+
+This project leverages the latest in AI and Cloud infrastructure:
+
+*   **Large Language Model**: Meta Llama 3.1 (via Groq API)
+*   **Orchestration**: LangChain & LangGraph
+*   **Database**: TiDB Serverless (Unified Vector & Graph Store)
+*   **Embeddings**: HuggingFace (`sentence-transformers`)
+*   **Interface**: Streamlit (Python)
+
+Link : https://autonomous-corporate-research-analyst.streamlit.app/
+
+---
+*Built for the future of Corporate Intelligence.*
