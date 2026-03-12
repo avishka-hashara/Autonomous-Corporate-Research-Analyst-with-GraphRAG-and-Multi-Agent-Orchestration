@@ -26,7 +26,8 @@ Standard RAG (Retrieval-Augmented Generation) systems often fail on complex quer
 *   **🕸️ Knowledge Graph Extraction**: Automatically identifies and maps relationships between people, organizations, and concepts.
 *   **🧠 Hybrid Intelligence**: Merges structured graph data with unstructured textual analysis for superior accuracy.
 *   **⚡ Real-Time Processing**: optimized for speed and accuracy using Groq's LPU inference engine.
-*   **📱 Modern Experience**: Features a "Premium Dark Mode" interface designed for professional analysts, fully responsive on all devices.
+*   **🌐 Seamless Interface: Offers a "Professional Adaptive Mode" crafted for analysts, ensuring an elegant, responsive experience across all devices.
+
 
 ## 🏗️ How It Works
 
