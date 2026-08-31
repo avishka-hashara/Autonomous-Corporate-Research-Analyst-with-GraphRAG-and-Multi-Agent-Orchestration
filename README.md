@@ -1,36 +1,36 @@
-# 🤖 Corporate Analyst Agent
+![Corporate Analyst Agent Banner](assets/banner.png)
 
-> **An Autonomous AI Research Assistant specifically designed for Corporate Strategy & Analysis.**  
+# Corporate Analyst Agent
+
+> **An Autonomous AI Research Assistant specifically designed for Corporate Strategy and Analysis.**  
 > Powered by **Llama 3**, **LangGraph**, and **TiDB Serverless**.
 
-![Corporate Analyst Agent](assets/home.png)
+## Overview
 
-## 📖 Overview
+The **Corporate Analyst Agent** is an AI system capable of performing deep research across complex corporate documents. Unlike traditional chatbots that simply predict the next word, this agent uses a **Cognitive Architecture** to plan, research, and verify information.
 
-The **Corporate Analyst Agent** is a next-generation AI tool capable of performing deep research on complex corporate documents. Unlike traditional chatbots that simply predict the next word, this agent uses a **Cognitive Architecture** to plan, research, and verify information.
+It combines **Knowledge Graphs** (to understand entities such as *CEO*, *Competitor*, and *Acquisition*) with **Vector Search** (to understand semantic context), ensuring that every answer is grounded strictly in the provided data.
 
-It combines **Knowledge Graphs** (to understand entities like *CEO*, *Competitor*, *Acquisition*) with **Vector Search** (to understand semantic meaning), ensuring that every answer is grounded strictly in the provided data.
+## The Problem Solved
 
-## 🎯 The Problem Solved
+Standard Retrieval-Augmented Generation (RAG) systems often fail on complex corporate queries such as *"How does the new regulation affect the subsidiary's risk profile?"* because they rely solely on keyword or direct semantic chunk matching without understanding entity relationships.
 
-Standard RAG (Retrieval-Augmented Generation) systems often fail on complex queries like *"How does the new regulation affect the subsidiary's risk profile?"* because they only look for matching keywords.
+**This Agent addresses this challenge by:**
+1. **Extracting Structure**: Automatically constructing a graph of relationships from ingested documents.
+2. **Multi-Step Reasoning**: Decomposing complex queries into sub-tasks (e.g., "Find subsidiary", "Check regulations", "Analyze risk").
+3. **Hallucination Prevention**: Explicitly verifying facts with a compliance reviewer and refusing to answer if information is absent in source data.
 
-**This Agent solves that by:**
-1.  **Extracting Structure**: It builds a graph of relationships from the document.
-2.  **Multi-Step Reasoning**: It breaks down complex questions into sub-tasks (e.g., "Find subsidiary", "Check regulations", "Analyze risk").
-3.  **No Hallucinations**: It explicitly refuses to answer if the information is not in the source text.
+## Key Capabilities
 
-## ✨ Key Capabilities
+* **Autonomous Research**: The supervisor agent dynamically coordinates specialized sub-agents (Vector Searcher and Graph Searcher) to gather comprehensive evidence.
+* **Knowledge Graph Extraction**: Automatically identifies and maps entities and relationships from corporate PDF filings.
+* **Hybrid Intelligence**: Combines structured graph queries with unstructured vector similarity search for accurate corporate intelligence.
+* **Real-Time Processing**: Optimized for speed and precision using Groq LPU inference.
+* **Modern Experience**: Clean dark-mode interface built for analysts, featuring real-time agent thought streaming and managed knowledge repositories.
 
-*   **🕵️‍♂️ Autonomous Research**: The agent assumes the role of a "Supervisor" and assigns tasks to specialized workers ("Vector Searcher" and "Graph Searcher").
-*   **🕸️ Knowledge Graph Extraction**: Automatically identifies and maps relationships between people, organizations, and concepts.
-*   **🧠 Hybrid Intelligence**: Merges structured graph data with unstructured textual analysis for superior accuracy.
-*   **⚡ Real-Time Processing**: optimized for speed and accuracy using Groq's LPU inference engine.
-*   **📱 Modern Experience**: Features a "Premium Dark Mode" interface designed for professional analysts, fully responsive on all devices.
+## System Architecture and Workflow
 
-## 🏗️ How It Works
-
-The system operates as a multi-agent workflow:
+The system operates as a multi-agent orchestrated pipeline:
 
 ```mermaid
 graph TD
@@ -39,7 +39,7 @@ graph TD
     Ingest -->|Semantics| VectorDB[(Vector Database)]
     
     User[User Asks Question] --> Supervisor[Supervisor Agent]
-    Supervisor -->|Why?| Planner{Research Plan}
+    Supervisor -->|Plan| Planner{Research Plan}
     
     Planner -->|Need Specifics| VectorWorker[Vector Search Agent]
     Planner -->|Need Relationships| GraphWorker[Graph Search Agent]
@@ -52,17 +52,15 @@ graph TD
     Reviewer -->|Verified Answer| User
 ```
 
-## 🛠️ Technology Stack
+## Technology Stack
 
-This project leverages the latest in AI and Cloud infrastructure:
+* **Large Language Model**: Meta Llama 3.1 (via Groq API)
+* **Orchestration**: LangChain and LangGraph
+* **Database**: TiDB Serverless (Unified Vector and Graph Store)
+* **Embeddings**: HuggingFace (`sentence-transformers`)
+* **Interface**: Streamlit (Python)
 
-*   **Large Language Model**: Meta Llama 3.1 (via Groq API)
-*   **Orchestration**: LangChain & LangGraph
-*   **Database**: TiDB Serverless (Unified Vector & Graph Store)
-*   **Embeddings**: HuggingFace (`sentence-transformers`)
-*   **Interface**: Streamlit (Python)
-
-Link : https://autonomous-corporate-research-analyst.streamlit.app/
+Live Application: [https://autonomous-corporate-research-analyst.streamlit.app/](https://autonomous-corporate-research-analyst.streamlit.app/)
 
 ---
 *Built for the future of Corporate Intelligence.*
