@@ -3,7 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
-.env
 
 # Neo4j
 neo4j_data/
@@ -11,5 +10,6 @@ data/
 *.pdf
 
 # IDE
-.vscode/
 .idea/
+config.bat
+node_modules
